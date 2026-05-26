@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Бюджет">
+<meta name="theme-color" content="#0f0f0f">
+<title>Семейный бюджет</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #242424;
+  --border: #2e2e2e;
+  --text: #f0f0f0;
+  --muted: #888;
+  --faint: #444;
+  --green: #4ade80;
+  --green-dim: #1a3d28;
+  --red: #f87171;
+  --red-dim: #3d1a1a;
+  --amber: #fbbf24;
+  --blue: #60a5fa;
+  --blue-dim: #0f2540;
+  --pink: #f472b6;
+  --pink-dim: #3d1130;
+  --accent: #4ade80;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  overscroll-behavior: none;
+}
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+.header { flex-shrink: 0; padding: 20px 20px 0; }
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.app-title { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+.sync-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface);
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+.sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  transition: background 0.3s;
+}
+.sync-dot.ok { background: var(--green); }
+.sync-dot.syncing { background: var(--amber); animation: pulse 1s infinite; }
+.sync-dot.error { background: var(--red); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.overview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.budget-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.budget-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.budget-amount { font-size: 32px; font-weight: 600; letter-spacing: -1px; font-family: 'DM Mono', monospace; }
+.budget-amount.safe { color: var(--green); }
+.budget-amount.warn { color: var(--amber); }
+.budget-amount.danger { color: var(--red); }
+.budget-right { text-align: right; }
+.budget-spent { font-size: 20px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--muted); }
+.progress-track { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease, background 0.4s ease; }
+.budget-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.stat-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.stat-val { font-size: 14px; font-weight: 500; font-family: 'DM Mono', monospace; }
+
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.add-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.form-title { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.inp {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  -webkit-appearance: none;
+  transition: border-color 0.2s;
+}
+.inp:focus { border-color: var(--accent); }
+.inp::placeholder { color: var(--faint); }
+.inp-amount { width: 120px; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.who-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.who-btn {
+  padding: 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  -webkit-appearance: none;
+}
+.who-btn.active-enver { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+.who-btn.active-wife { background: var(--pink-dim); border-color: var(--pink); color: var(--pink); }
+.who-btn.active-both { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.btn-submit {
+  width: 100%;
+  background: var(--accent);
+  color: #0f0f0f;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-appearance: none;
+}
+.btn-submit:active { transform: scale(0.98); opacity: 0.85; }
+
+.list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.list-title { font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.filter-tabs { display: flex; gap: 6px; }
+.filter-tab {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-appearance: none;
+  transition: all 0.15s;
+}
+.filter-tab.active { background: var(--surface2); color: var(--text); border-color: var(--faint); }
+
+.expense-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
+.expense-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.exp-who-dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+  flex-shrink: 0;
+}
+.dot-enver { background: var(--blue-dim); color: var(--blue); }
+.dot-wife { background: var(--pink-dim); color: var(--pink); }
+.dot-both { background: var(--green-dim); color: var(--green); }
+.exp-info { flex: 1; min-width: 0; }
+.exp-desc { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exp-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.exp-amount { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; color: var(--red); flex-shrink: 0; }
+.btn-del { background: none; border: none; color: var(--faint); font-size: 20px; cursor: pointer; padding: 0 0 0 8px; line-height: 1; flex-shrink: 0; transition: color 0.15s; }
+.btn-del:active { color: var(--red); }
+.empty-state { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 14px; }
+
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; flex-direction: column; gap: 12px;
+  color: var(--muted); font-size: 14px;
+}
+.spinner {
+  width: 24px; height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="app" id="app" style="display:none">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-title">Семейный бюджет</div>
+      <div class="sync-badge">
+        <div class="sync-dot syncing" id="sync-dot"></div>
+        <span id="sync-label">Подключение</span>
+      </div>
+    </div>
+
+    <div class="overview">
+      <div class="budget-main">
+        <div>
+          <div class="budget-label">Осталось в этом месяце</div>
+          <div class="budget-amount safe" id="left-amt">€1 905</div>
+        </div>
+        <div class="budget-right">
+          <div class="budget-label">Потрачено</div>
+          <div class="budget-spent" id="spent-amt">€0</div>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress" style="width:0%;background:var(--green)"></div>
+      </div>
+      <div class="budget-stats">
+        <div class="stat">
+          <div class="stat-label">в день</div>
+          <div class="stat-val" id="day-amt">€63</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">в неделю</div>
+          <div class="stat-val" id="week-amt">€476</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">% бюджета</div>
+          <div class="stat-val" id="pct-amt">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="add-form">
+      <div class="form-title">Новый расход</div>
+      <div class="input-row">
+        <input class="inp" type="text" id="inp-desc" placeholder="Продукты, кафе, бензин…">
+        <input class="inp inp-amount" type="number" id="inp-amt" placeholder="€0" min="0" step="0.01" inputmode="decimal">
+      </div>
+      <div class="who-row">
+        <button class="who-btn active-enver" id="who-enver" onclick="selectWho('enver')">Enver</button>
+        <button class="who-btn" id="who-wife" onclick="selectWho('wife')">Жена</button>
+        <button class="who-btn" id="who-both" onclick="selectWho('both')">Оба</button>
+      </div>
+      <button class="btn-submit" onclick="addExpense()">Добавить расход</button>
+    </div>
+
+    <div class="list-header">
+      <div class="list-title">Расходы</div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="setFilter('all',this)">Все</button>
+        <button class="filter-tab" onclick="setFilter('enver',this)">Enver</button>
+        <button class="filter-tab" onclick="setFilter('wife',this)">Жена</button>
+      </div>
+    </div>
+    <div class="expense-list" id="expense-list">
+      <div class="empty-state">Загрузка…</div>
+    </div>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <span>Подключение к базе…</span>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAnRnK_MA7a1HHQFYoEhVJ2kylEa_T_E6Y",
+  authDomain: "family-budget-634f1.firebaseapp.com",
+  projectId: "family-budget-634f1",
+  storageBucket: "family-budget-634f1.firebasestorage.app",
+  messagingSenderId: "502700474802",
+  appId: "1:502700474802:web:fd92c925270f1e59dc24ab"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const BUDGET = 1905;
+let expenses = [];
+let selectedWho = 'enver';
+let currentFilter = 'all';
+
+window.selectWho = function(who) {
+  selectedWho = who;
+  document.getElementById('who-enver').className = 'who-btn' + (who === 'enver' ? ' active-enver' : '');
+  document.getElementById('who-wife').className = 'who-btn' + (who === 'wife' ? ' active-wife' : '');
+  document.getElementById('who-both').className = 'who-btn' + (who === 'both' ? ' active-both' : '');
+};
+
+window.setFilter = function(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+};
+
+function fmt(n) {
+  return '€' + Math.abs(n).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return 'Сегодня, ' + time;
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }) + ' ' + time;
+}
+
+function updateOverview() {
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const left = BUDGET - totalSpent;
+  const pct = Math.min(100, (totalSpent / BUDGET) * 100);
+  const daysLeft = 30;
+
+  const leftEl = document.getElementById('left-amt');
+  leftEl.textContent = fmt(left);
+  leftEl.className = 'budget-amount ' + (pct < 60 ? 'safe' : pct < 85 ? 'warn' : 'danger');
+
+  document.getElementById('spent-amt').textContent = fmt(totalSpent);
+  document.getElementById('pct-amt').textContent = Math.round(pct) + '%';
+  document.getElementById('day-amt').textContent = fmt(Math.max(0, left / daysLeft));
+  document.getElementById('week-amt').textContent = fmt(Math.max(0, (left / daysLeft) * 7));
+
+  const prog = document.getElementById('progress');
+  prog.style.width = pct + '%';
+  prog.style.background = pct < 60 ? 'var(--green)' : pct < 85 ? 'var(--amber)' : 'var(--red)';
+}
+
+function renderList() {
+  const filtered = currentFilter === 'all' ? expenses : expenses.filter(e => e.who === currentFilter);
+  const list = document.getElementById('expense-list');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state">Расходов пока нет</div>';
+    return;
+  }
+  const whoLabel = { enver: 'E', wife: 'Ж', both: '⁕' };
+  const dotClass = { enver: 'dot-enver', wife: 'dot-wife', both: 'dot-both' };
+  list.innerHTML = filtered.map(e => `
+    <div class="expense-item">
+      <div class="exp-who-dot ${dotClass[e.who] || 'dot-both'}">${whoLabel[e.who] || '⁕'}</div>
+      <div class="exp-info">
+        <div class="exp-desc">${e.desc}</div>
+        <div class="exp-meta">${fmtDate(e.ts)}</div>
+      </div>
+      <div class="exp-amount">-${fmt(e.amount)}</div>
+      <button class="btn-del" onclick="deleteExpense('${e.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+window.deleteExpense = async function(id) {
+  try {
+    await deleteDoc(doc(db, 'expenses', id));
+  } catch(e) { console.error(e); }
+};
+
+window.addExpense = async function() {
+  const desc = document.getElementById('inp-desc').value.trim();
+  const amt = parseFloat(document.getElementById('inp-amt').value);
+  if (!desc || isNaN(amt) || amt <= 0) {
+    document.getElementById(desc ? 'inp-amt' : 'inp-desc').focus();
+    return;
+  }
+  setSyncState('syncing');
+  try {
+    await addDoc(collection(db, 'expenses'), {
+      desc, amount: amt, who: selectedWho, ts: new Date()
+    });
+    document.getElementById('inp-desc').value = '';
+    document.getElementById('inp-amt').value = '';
+    document.getElementById('inp-desc').focus();
+  } catch(e) {
+    setSyncState('error');
+    console.error(e);
+  }
+};
+
+function setSyncState(state) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (state === 'ok') { dot.className = 'sync-dot ok'; lbl.textContent = 'Live'; }
+  else if (state === 'syncing') { dot.className = 'sync-dot syncing'; lbl.textContent = 'Синк…'; }
+  else { dot.className = 'sync-dot error'; lbl.textContent = 'Ошибка'; }
+}
+
+// Real-time listener
+const q = query(collection(db, 'expenses'), orderBy('ts', 'desc'));
+onSnapshot(q, (snapshot) => {
+  expenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  updateOverview();
+  renderList();
+  setSyncState('ok');
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}, (err) => {
+  setSyncState('error');
+  console.error(err);
+});
+</script>
+</body>
+</html>
